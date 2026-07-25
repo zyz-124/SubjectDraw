@@ -16,20 +16,12 @@ LAYOUT_MAP = {
 
 
 def _build_mm_color_overrides(colors):
-    mapping = {
-        "primary": "--primary",
-        "accent": "--accent",
-        "bg": "--bg",
-        "text": "--text",
-    }
-    lines = []
-    for key, var in mapping.items():
-        val = colors.get(key, "")
-        if val and val.strip():
-            lines.append(f"  {var}: {val.strip()};")
-    if lines:
-        return ":root {\n" + "\n".join(lines) + "\n}"
-    return ""
+    primary = colors.get("primary", "")
+    if not primary or not primary.strip():
+        return ""
+    p = primary.strip()
+    lines = [f"  --primary: {p};", f"  --accent: {p};"]
+    return ":root {\n" + "\n".join(lines) + "\n}"
 
 
 def render_html(data, **fmt_opts):

@@ -258,9 +258,6 @@ class SubjectDrawGUI:
         self.style_var = tk.StringVar(value=DEFAULT_STYLE)
         self.center_pos_var = tk.StringVar(value="center")
         self.mm_primary_var = tk.StringVar(value="")
-        self.mm_accent_var = tk.StringVar(value="")
-        self.mm_bg_var = tk.StringVar(value="")
-        self.mm_text_var = tk.StringVar(value="")
 
 
         self._apply_styles()
@@ -643,48 +640,41 @@ class SubjectDrawGUI:
         self._lbl(g2, "格式").grid(row=0, column=0, sticky="w", padx=(0, 6), pady=(0, 3))
         self._combo(g2, self.format_b_var, avail, 14).grid(
             row=1, column=0, columnspan=2, sticky="ew", padx=(0, 16), pady=(0, 10))
-        self._lbl(g2, "色彩主题").grid(row=0, column=2, sticky="w", padx=(0, 6), pady=(0, 3))
-        self._combo(g2, self.theme_var, list_themes(), 14).grid(
-            row=1, column=2, columnspan=2, sticky="ew", pady=(0, 10))
-        self._lbl(g2, "装饰风格").grid(row=2, column=0, sticky="w", padx=(0, 6), pady=(0, 3))
+        self._lbl(g2, "装饰风格").grid(row=0, column=2, sticky="w", padx=(0, 6), pady=(0, 3))
         self._combo(g2, self.style_var, list_styles(), 14).grid(
-            row=3, column=0, columnspan=2, sticky="ew", padx=(0, 16), pady=(0, 6))
-        self._lbl(g2, "中心位置").grid(row=4, column=0, sticky="w", padx=(0, 6), pady=(0, 3))
+            row=1, column=2, columnspan=2, sticky="ew", pady=(0, 10))
+        self._lbl(g2, "中心位置").grid(row=2, column=0, sticky="w", padx=(0, 6), pady=(0, 3))
         POSITIONS = ["center", "left", "right", "top", "bottom"]
         self._combo(g2, self.center_pos_var, POSITIONS, 14).grid(
-            row=5, column=0, columnspan=2, sticky="ew", padx=(0, 16), pady=(0, 6))
-        self._lbl(g2, "自定义颜色").grid(row=6, column=0, sticky="w", padx=(0, 6), pady=(8, 3))
-        color_frame = tk.Frame(g2, bg=C["card"])
-        color_frame.grid(row=7, column=0, columnspan=4, sticky="ew", pady=(0, 6))
-        color_items = [
-            ("主题色", self.mm_primary_var),
-            ("强调色", self.mm_accent_var),
-            ("背景色", self.mm_bg_var),
-            ("文字色", self.mm_text_var),
-        ]
-        for ci, (label, var) in enumerate(color_items):
-            lf = tk.Frame(color_frame, bg=C["card"])
-            lf.pack(side="left", padx=(0, 12))
-            tk.Label(lf, text=label, bg=C["card"], fg=C["text"],
-                     font=(ff, fs - 1)).pack(anchor="w")
-            ef = tk.Frame(lf, bg=C["card"])
-            ef.pack(anchor="w")
-            entry = tk.Entry(ef, textvariable=var, width=7,
-                             bg=C["input_bg"], fg=C["text"],
-                             font=(ff, fs - 1), relief="flat",
-                             highlightthickness=1,
-                             highlightbackground=C["border"],
-                             highlightcolor=C["primary"])
-            entry.pack(side="left")
-            def _pick_color(target_var=var):
-                from tkinter import colorchooser
-                c = colorchooser.askcolor(initialcolor=target_var.get() or "#000000")
-                if c and c[1]:
-                    target_var.set(c[1])
-            tk.Button(ef, text="...", width=2,
-                      bg=C["light_bg"], fg=C["text"],
-                      font=(ff, fs - 1), relief="flat",
-                      command=_pick_color).pack(side="left", padx=(2, 0))
+            row=3, column=0, columnspan=2, sticky="ew", padx=(0, 16), pady=(0, 6))
+        self._lbl(g2, "自定义主题色").grid(row=2, column=2, sticky="w", padx=(0, 6), pady=(8, 3))
+        cf = tk.Frame(g2, bg=C["card"])
+        cf.grid(row=3, column=2, columnspan=2, sticky="ew", pady=(0, 6))
+        color_entry = tk.Entry(cf, textvariable=self.mm_primary_var, width=9,
+                               bg=C["input_bg"], fg=C["text"],
+                               font=(ff, fs), relief="flat",
+                               highlightthickness=1,
+                               highlightbackground=C["border"],
+                               highlightcolor=C["primary"])
+        color_entry.pack(side="left")
+        swatch = tk.Canvas(cf, width=24, height=24,
+                           bg=self.mm_primary_var.get() or "#ffffff",
+                           highlightthickness=1,
+                           highlightbackground=C["border"],
+                           cursor="hand2")
+        swatch.pack(side="left", padx=(6, 0))
+        def _pick_color(_e=None):
+            from tkinter import colorchooser
+            c = colorchooser.askcolor(initialcolor=self.mm_primary_var.get() or "#4a90d9")
+            if c and c[1]:
+                self.mm_primary_var.set(c[1])
+                swatch.configure(bg=c[1])
+        swatch.bind("<Button-1>", _pick_color)
+        def _sync_swatch(*_a):
+            v = self.mm_primary_var.get().strip()
+            if v:
+                swatch.configure(bg=v)
+        self.mm_primary_var.trace_add("write", _sync_swatch)
 
         c4 = self._card(outer)
         c4.pack(fill="both", expand=True, pady=(14, 0))
@@ -1085,13 +1075,9 @@ class SubjectDrawGUI:
             elif "centerPosition" not in data:
                 data["centerPosition"] = "center"
             fmt_opts = dict(
-                theme=self.theme_var.get().strip() or DEFAULT_THEME,
                 style=self.style_var.get().strip() or DEFAULT_STYLE,
                 mm_colors={
                     "primary": self.mm_primary_var.get().strip(),
-                    "accent": self.mm_accent_var.get().strip(),
-                    "bg": self.mm_bg_var.get().strip(),
-                    "text": self.mm_text_var.get().strip(),
                 },
             )
             html = render_html(data, fmt=fmt, **fmt_opts)
