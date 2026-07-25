@@ -1,5 +1,7 @@
 # SubjectDraw
 
+![SubjectDraw](icon.png)
+
 AI 驱动的知识卡片排版工具 — 交作业神器
 
 ## 一句话介绍
