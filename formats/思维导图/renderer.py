@@ -252,23 +252,6 @@ def render_html(data, **fmt_opts):
 .ctx-item.danger {{ color:#d33; }}
 .ctx-item.danger:hover {{ background:#fef0f0; }}
 
-.undo-bar {{
-    position:fixed; bottom:16px; right:16px; z-index:200;
-    display:flex; align-items:center; gap:4px;
-    background:var(--card, #fff); border:1px solid var(--border, #ddd);
-    border-radius:8px; padding:4px 8px;
-    box-shadow:0 2px 12px rgba(0,0,0,0.1);
-    font-family:"Microsoft YaHei UI",sans-serif;
-}}
-.undo-bar button {{
-    width:28px; height:28px; border:none; border-radius:6px;
-    background:var(--light-bg, #f0f0f0); color:var(--text, #333);
-    font-size:14px; font-weight:bold; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    transition:background 0.15s;
-}}
-.undo-bar button:hover {{ background:var(--primary, #333); color:var(--bg, #fff); }}
-.undo-bar button:disabled {{ opacity:0.3; cursor:default; background:var(--light-bg, #f0f0f0); color:var(--text, #333); }}
 </style>
 </head>
 <body>
@@ -277,10 +260,6 @@ def render_html(data, **fmt_opts):
     <span id="zoomLevel">100%</span>
     <button id="zoomOut" title="缩小">-</button>
     <button id="zoomReset" title="重置">&#x27F3;</button>
-</div>
-<div class="undo-bar" id="undoBar">
-    <button id="undoBtn" title="撤销 Ctrl+Z" disabled>&#x21A9;</button>
-    <button id="redoBtn" title="重做 Ctrl+Y" disabled>&#x21AA;</button>
 </div>
 <div class="page" id="canvas">
     <div class="zoom-viewport" id="zoomViewport">
@@ -352,47 +331,6 @@ var cards = Array.prototype.slice.call(document.querySelectorAll('.branch-title-
 var mainConns = [];
 var subConns = [];
 var NS = 'http://www.w3.org/2000/svg';
-
-// === UNDO / REDO ===
-var undoStack = [], redoStack = [], MAX_UNDO = 30;
-var undoBtn = document.getElementById('undoBtn');
-var redoBtn = document.getElementById('redoBtn');
-
-function snapshot() {{
-    undoStack.push(canvas.innerHTML);
-    if (undoStack.length > MAX_UNDO) undoStack.shift();
-    redoStack = [];
-    updateUndoBtns();
-}}
-function undo() {{
-    if (!undoStack.length) return;
-    redoStack.push(canvas.innerHTML);
-    canvas.innerHTML = undoStack.pop();
-    afterRestore();
-}}
-function redo() {{
-    if (!redoStack.length) return;
-    undoStack.push(canvas.innerHTML);
-    canvas.innerHTML = redoStack.pop();
-    afterRestore();
-}}
-function afterRestore() {{
-    centerCard = document.getElementById('centerCard');
-    cards = Array.prototype.slice.call(document.querySelectorAll('.branch-title-card, .point-card, .mm-center-card'));
-    rebuildConns();
-    setTimeout(drawAll, 50);
-    updateUndoBtns();
-}}
-function updateUndoBtns() {{
-    undoBtn.disabled = !undoStack.length;
-    redoBtn.disabled = !redoStack.length;
-}}
-undoBtn.addEventListener('click', undo);
-redoBtn.addEventListener('click', redo);
-document.addEventListener('keydown', function(e) {{
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {{ e.preventDefault(); undo(); }}
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {{ e.preventDefault(); redo(); }}
-}});
 
 // === ZOOM & PAN ===
 var viewport = document.getElementById('zoomViewport');
@@ -701,7 +639,7 @@ ctxMenu.addEventListener('click', function(e) {{
         else {{ ctxTarget.style.boxShadow = '0 0 18px 4px var(--accent, #4a90d9)'; ctxTarget.style.borderColor = 'var(--accent, #4a90d9)'; highlightSet[key] = true; }}
     }} else if (action === 'invert') {{
         if (!group) return;
-        snapshot();
+
         group.classList.toggle('points-flipped');
         setTimeout(drawAll, 50);
     }} else if (action === 'edit') {{
@@ -716,7 +654,7 @@ ctxMenu.addEventListener('click', function(e) {{
         }}
     }} else if (action === 'addPoint') {{
         if (!group) return;
-        snapshot();
+
         var pts = group.querySelector('.branch-points');
         if (!pts) return;
         var newPt = document.createElement('div');
@@ -742,20 +680,20 @@ ctxMenu.addEventListener('click', function(e) {{
     }} else if (action === 'pickText') {{
         ctxTarget.style.color = document.getElementById('ctxTextColor').value;
     }} else if (action === 'reset') {{
-        snapshot();
+
         ctxTarget.style.cssText = '';
         delete highlightSet[bi + (isTitle ? '_t' : '_p')];
         if (group) group.querySelectorAll('.point-card').forEach(function(p) {{ p.style.cssText = ''; }});
     }} else if (action === 'deletePoint') {{
         if (!isPoint || !group) return;
-        snapshot();
+
         ctxTarget.remove();
         var ptCards = group.querySelectorAll('.point-card');
         for (var i = 0; i < ptCards.length; i++) ptCards[i].setAttribute('data-idx', i);
         rebuildConns(); setTimeout(drawAll, 50);
     }} else if (action === 'delete') {{
         if (!group) return;
-        snapshot();
+
         var delBi = group.getAttribute('data-branch');
         group.remove();
         mainConns = mainConns.filter(function(c) {{ return c.to && c.to.getAttribute('data-branch') !== delBi; }});
@@ -788,11 +726,11 @@ ctxCenter.addEventListener('click', function(e) {{
         if (highlightSet['_center']) {{ ctxTarget.style.boxShadow = ''; delete highlightSet['_center']; }}
         else {{ ctxTarget.style.boxShadow = '0 0 24px 6px var(--accent, #4a90d9)'; highlightSet['_center'] = true; }}
     }} else if (action === 'expandAll') {{
-        snapshot();
+
         document.querySelectorAll('.branch-group').forEach(function(g) {{ g.style.opacity = '1'; g.style.transform = ''; }});
         setTimeout(drawAll, 50);
     }} else if (action === 'collapseAll') {{
-        snapshot();
+
         document.querySelectorAll('.branch-group').forEach(function(g) {{ g.style.opacity = '0.3'; g.style.transform = 'scale(0.85)'; }});
         setTimeout(drawAll, 50);
     }} else if (action === 'pickBg') {{
@@ -800,7 +738,7 @@ ctxCenter.addEventListener('click', function(e) {{
     }} else if (action === 'pickText') {{
         ctxTarget.style.color = document.getElementById('ctxCenterText').value;
     }} else if (action === 'resetAll') {{
-        snapshot();
+
         ctxTarget.style.cssText = '';
         delete highlightSet['_center'];
         document.querySelectorAll('.branch-title-card, .point-card').forEach(function(c) {{ c.style.cssText = ''; }});
